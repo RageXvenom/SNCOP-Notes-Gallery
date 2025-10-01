@@ -25,7 +25,7 @@ VITE_API_BASE_URL=/api
 # Server.js us path pe run hoga
 
 👉 Agar setup samajh nahi aaye to mujhe WhatsApp karna  
-   (Contact info available at: arvindnag.site)
+   (Contact info available at: https://arvindnag.site)
 
 4️⃣ Install Dependencies
 -------------------------
