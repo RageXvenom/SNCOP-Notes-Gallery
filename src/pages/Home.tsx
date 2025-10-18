@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Users, Award, Download, FileText, Play, ArrowRight } from 'lucide-react';
+import { BookOpen, Users, Award, Download, FileText, Play, ArrowRight, MessageSquare } from 'lucide-react';
 import PharmacyLogo from '../components/PharmacyLogo';
 
 const Home: React.FC = () => {
@@ -13,18 +13,18 @@ const Home: React.FC = () => {
       gradient: 'from-blue-500 to-cyan-500'
     },
     {
+      icon: <MessageSquare className="h-8 w-8" />,
+      title: 'SNCOP-AI Chat',
+      description: 'Ask questions and get instant AI-powered help with your studies',
+      link: '/ai-chat',
+      gradient: 'from-emerald-500 to-teal-500'
+    },
+    {
       icon: <FileText className="h-8 w-8" />,
       title: 'Practice Tests',
       description: 'Practice with comprehensive test materials',
       link: '/practice-tests',
-      gradient: 'from-purple-500 to-pink-500'
-    },
-    {
-      icon: <Play className="h-8 w-8" />,
-      title: 'Practicals',
-      description: 'Practical sessions and lab materials',
-      link: '/practicals',
-      gradient: 'from-green-500 to-teal-500'
+      gradient: 'from-violet-500 to-pink-500'
     },
     {
       icon: <Award className="h-8 w-8" />,
@@ -73,11 +73,12 @@ const Home: React.FC = () => {
                 <ArrowRight className="ml-3 h-5 w-5" />
               </Link>
               <Link
-                to="/practice-tests"
-                className="inline-flex items-center px-8 py-4 rounded-xl button-secondary text-lg hover-scale"
+                to="/ai-chat"
+                className="inline-flex items-center px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg hover-scale shadow-2xl shimmer-effect"
               >
-                <FileText className="mr-3 h-5 w-5" />
-                Practice Tests
+                <MessageSquare className="mr-3 h-5 w-5" />
+                Ask SNCOP-AI
+                <ArrowRight className="ml-3 h-5 w-5" />
               </Link>
             </div>
           </div>

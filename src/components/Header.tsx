@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Sun, Moon, BookOpen, Settings } from 'lucide-react';
+import { Menu, X, Sun, Moon, BookOpen, Settings, MessageSquare } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { fileStorageService } from '../services/fileStorage';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
   const { isLoggedIn, syncWithServer } = useData();
+  const { user } = useAuth();
   const location = useLocation();
 
   // Auto-sync when component mounts and periodically
@@ -34,6 +36,7 @@ const Header: React.FC = () => {
     { name: 'Home', href: '/' },
     { name: 'Notes Gallery', href: '/notes' },
     { name: 'Practice Tests', href: '/practice-tests' },
+    { name: 'SNCOP-AI', href: '/ai-chat' },
     { name: 'About', href: '/about' },
     { name: 'Developer', href: '/developer' },
   ];

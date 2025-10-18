@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
+    "@supabase/supabase-js": "^2.39.3",
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "express": "^4.18.2",
@@ -23,7 +24,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.2.1",
-    "react-router-dom": "^7.8.2"
+    "react-markdown": "^9.0.1",
+    "react-router-dom": "^7.8.2",
+    "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
