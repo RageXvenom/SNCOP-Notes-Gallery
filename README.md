@@ -162,7 +162,7 @@ npm run dev:full
 > specially AI ke parts me bahut time aur dedication gaya hai 💻🧠  
 > Agar tum is project ko use ya share karte ho,  
 > to kindly likhna —  
-> **Developed by RageXvenom** 💀🔥  
+> **Developed by Arvind Nag (RageXvenom)** 💀🔥  
 
 ---
 
