@@ -70,6 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: undefined,
+        },
       });
 
       if (signUpError) throw signUpError;
@@ -85,7 +88,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             },
           ]);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          if (profileError.message.includes('duplicate key') || profileError.message.includes('profiles_email_key')) {
+            throw new Error('This email is already registered. Please use a different email or try logging in.');
+          }
+          throw profileError;
+        }
       }
 
       return { error: null };
