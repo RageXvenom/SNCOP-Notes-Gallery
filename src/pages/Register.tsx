@@ -31,7 +31,11 @@ const Register: React.FC = () => {
       setError(error.message);
       setLoading(false);
     } else {
-      navigate('/ai-chat');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setFullName('');
+      navigate('/login', { state: { message: 'Account created successfully! Please log in with your credentials.' } });
     }
   };
   return (
