@@ -1,0 +1,6 @@
+# 📌 APP SETUP INSTRUCTIONS (FULL GUIDE)
+
+## 1️⃣ Rename File
+
+Sabse pehle `example.env` file ka naam badal kar `.env` kar do. ...
+(truncated for brevity) ...
