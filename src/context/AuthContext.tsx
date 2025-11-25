@@ -75,21 +75,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (signUpError) throw signUpError;
 
       if (data.user) {
-        const { error: profileError } = await supabase
+        const { data: existingProfile } = await supabase
           .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email!,
-              full_name: fullName,
-            },
-          ]);
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
 
-        if (profileError) {
-          if (profileError.message.includes('duplicate key') || profileError.message.includes('profiles_email_key')) {
-            throw new Error('This email is already registered. Please use a different email or try logging in.');
+        if (!existingProfile) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: data.user.id,
+                email: data.user.email!,
+                full_name: fullName,
+              },
+            ]);
+
+          if (profileError) {
+            if (profileError.message.includes('duplicate key') || profileError.message.includes('profiles_email_key')) {
+              throw new Error('This email is already registered. Please use a different email or try logging in.');
+            }
+            throw profileError;
           }
-          throw profileError;
         }
 
         await new Promise(resolve => setTimeout(resolve, 500));
