@@ -70,9 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: undefined,
-        },
       });
 
       if (signUpError) throw signUpError;
@@ -94,6 +91,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           throw profileError;
         }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       return { error: null };
