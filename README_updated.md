@@ -53,26 +53,41 @@ Keys mil jayengi:
 
 ---
 
-# 🗄️ Supabase Database Structure (Tables Setup)
+## 🌌 **1️⃣ Profiles Table**
 
-## 1️⃣ `profiles` Table  
-- `id` — uuid (auth.uid)  
-- `email` — user email  
-- `full_name`  
-- timestamps  
+| 🌟 Column | 🔮 Type | 📝 Description |
+|----------|---------|----------------|
+| **id** | `uuid` | Maps to `auth.uid()` |
+| **email** | `text` | User email |
+| **full_name** | `text` | Full name |
+| **created_at** | `timestamptz` | Auto‑created |
+| **updated_at** | `timestamptz` | Auto‑updated |
 
-## 2️⃣ `chat_conversations` Table  
-- `id` uuid  
-- `user_id` (FK → profiles)  
-- `title` default `"New Conversation"`  
-- timestamps  
+---
 
-## 3️⃣ `chat_messages` Table  
-- `id` uuid  
-- `conversation_id` FK  
-- `user_id` FK  
-- `role`, `content`, `attachments`  
-- timestamps  
+## 🚀 **2️⃣ Chat Conversations Table**
+
+| ☄️ Column | 🔮 Type | 📝 Description |
+|----------|---------|----------------|
+| **id** | `uuid` | Primary key |
+| **user_id** | `uuid` | FK → profiles(id) |
+| **title** | `text` | Default: _"New Conversation"_ |
+| **created_at** | `timestamptz` | Auto‑created |
+| **updated_at** | `timestamptz` | Auto‑updated |
+
+---
+
+## 🔥 **3️⃣ Chat Messages Table**
+
+| ⚡ Column | 🔮 Type | 📝 Description |
+|----------|---------|----------------|
+| **id** | `uuid` | Primary key |
+| **conversation_id** | `uuid` | FK → chat_conversations(id) |
+| **user_id** | `uuid` | FK → profiles(id) |
+| **role** | `text` | Message owner (user / assistant) |
+| **content** | `text` | Message text |
+| **attachments** | `jsonb` | Attachments array |
+| **created_at** | `timestamptz` | Auto‑created |
 
 ---
 
