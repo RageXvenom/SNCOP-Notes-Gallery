@@ -51,6 +51,8 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 Keys mil jayengi:  
 **Supabase Dashboard → Project Settings → API**
 
+
+# ✨🪄 Supabase Database Structure
 ---
 
 ## 🌌 **1️⃣ Profiles Table**
