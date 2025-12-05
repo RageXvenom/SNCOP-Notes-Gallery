@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, FileText, Clock, Eye, BookOpen, Users } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import FileViewer from '../components/FileViewer';
+import SortFilter from '../components/SortFilter';
 
 const SubjectNotes: React.FC = () => {
   const params = useParams();
@@ -10,6 +11,9 @@ const SubjectNotes: React.FC = () => {
   const { subjects = [], notes = [], practicals = [] } = useData();
   const [selectedUnit, setSelectedUnit] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'notes' | 'practicals'>('notes');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState<'newest' | 'oldest'>('newest');
+  const [dateFilter, setDateFilter] = useState<string | null>(null);
   const [viewerState, setViewerState] = useState({
     isOpen: false,
     fileData: '',
@@ -27,9 +31,58 @@ const SubjectNotes: React.FC = () => {
   const subjectNotes = notes.filter(note => note.subject === subjectName);
   const subjectPracticals = practicals.filter(practical => practical.subject === subjectName);
 
-  const filteredNotes = selectedUnit === 'all'
-    ? subjectNotes
-    : subjectNotes.filter(note => note.unit === selectedUnit);
+  const filteredNotes = useMemo(() => {
+    let filtered = subjectNotes.filter(note => {
+      const matchesUnit = selectedUnit === 'all' || note.unit === selectedUnit;
+      const matchesSearch = (note.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (note.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Date filter - exact match
+      let matchesDate = true;
+      if (dateFilter && note.uploadDate) {
+        const noteDate = new Date(note.uploadDate);
+        const filterDate = new Date(dateFilter);
+        matchesDate = noteDate.toDateString() === filterDate.toDateString();
+      }
+      
+      return matchesUnit && matchesSearch && matchesDate;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.uploadDate || '').getTime();
+      const dateB = new Date(b.uploadDate || '').getTime();
+      return sortOption === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  }, [subjectNotes, selectedUnit, searchTerm, dateFilter, sortOption]);
+
+  const filteredPracticals = useMemo(() => {
+    let filtered = subjectPracticals.filter(practical => {
+      const matchesSearch = (practical.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (practical.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Date filter - exact match
+      let matchesDate = true;
+      if (dateFilter && practical.uploadDate) {
+        const practicalDate = new Date(practical.uploadDate);
+        const filterDate = new Date(dateFilter);
+        matchesDate = practicalDate.toDateString() === filterDate.toDateString();
+      }
+      
+      return matchesSearch && matchesDate;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.uploadDate || '').getTime();
+      const dateB = new Date(b.uploadDate || '').getTime();
+      return sortOption === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  }, [subjectPracticals, searchTerm, dateFilter, sortOption]);
 
   const handleViewFile = (fileData: string, fileName: string, type: any, subject?: string, fileType?: string, unit?: string, storedFileName?: string) => {
     setViewerState({
@@ -136,6 +189,18 @@ const SubjectNotes: React.FC = () => {
           </div>
         </div>
 
+        {/* Sort Filter Component */}
+        <div className="mb-8 fade-in-up">
+          <SortFilter
+            initialSort={sortOption}
+            initialSearch={searchTerm}
+            initialDate={dateFilter}
+            onSortChange={setSortOption}
+            onSearchChange={setSearchTerm}
+            onDateFilterChange={setDateFilter}
+          />
+        </div>
+
         {/* Notes Tab */}
         {activeTab === 'notes' && (
           <>
@@ -240,7 +305,7 @@ const SubjectNotes: React.FC = () => {
         {/* Practicals Tab */}
         {activeTab === 'practicals' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {subjectPracticals.map((practical, index) => (
+            {filteredPracticals.map((practical, index) => (
               <div
                 key={String(practical.id)}
                 className="glass-effect p-6 rounded-2xl card-hover slide-up enhanced-shadow"
@@ -305,21 +370,23 @@ const SubjectNotes: React.FC = () => {
               No notes available
             </h3>
             <p className="text-high-contrast opacity-70">
-              {selectedUnit === 'all'
-                ? 'Notes will appear here once they are uploaded by the admin.'
-                : `No notes available for ${String(selectedUnit)}. Try selecting a different unit.`}
+              {searchTerm || dateFilter || selectedUnit !== 'all'
+                ? 'Try adjusting your search criteria or filters.'
+                : 'Notes will appear here once they are uploaded by the admin.'}
             </p>
           </div>
         )}
 
-        {activeTab === 'practicals' && subjectPracticals.length === 0 && (
+        {activeTab === 'practicals' && filteredPracticals.length === 0 && (
           <div className="text-center py-16">
             <Users className="h-16 w-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
             <h3 className="text-xl font-bold text-high-contrast mb-2">
               No practicals available
             </h3>
             <p className="text-high-contrast opacity-70">
-              Practical materials will appear here once they are uploaded by the admin.
+              {searchTerm || dateFilter
+                ? 'Try adjusting your search criteria or filters.'
+                : 'Practical materials will appear here once they are uploaded by the admin.'}
             </p>
           </div>
         )}
