@@ -45,6 +45,7 @@ let fullBackupData = {
   notes: [],
   practiceTests: [],
   practicals: [],
+  assignments: [],
   lastBackup: null
 };
 
@@ -79,7 +80,13 @@ try {
   if (fs.existsSync(FULL_BACKUP_FILE)) {
     const backupJson = fs.readFileSync(FULL_BACKUP_FILE, 'utf8');
     fullBackupData = JSON.parse(backupJson);
-    console.log(`Loaded backup data with ${fullBackupData.subjects.length} subjects, ${fullBackupData.notes.length} notes, ${fullBackupData.practiceTests.length} practice tests, ${fullBackupData.practicals.length} practicals`);
+    
+    // Ensure assignments array exists
+    if (!fullBackupData.assignments) {
+      fullBackupData.assignments = [];
+    }
+    
+    console.log(`Loaded backup data with ${fullBackupData.subjects.length} subjects, ${fullBackupData.notes.length} notes, ${fullBackupData.practiceTests.length} practice tests, ${fullBackupData.practicals.length} practicals, ${fullBackupData.assignments.length} assignments`);
   }
 } catch (error) {
   console.error('Error loading metadata file:', error);
@@ -89,6 +96,7 @@ try {
     notes: [],
     practiceTests: [],
     practicals: [],
+    assignments: [],
     lastBackup: null
   };
 }
@@ -135,7 +143,20 @@ if (fullBackupData.practicals) {
   });
 }
 
-// Reconstruct subjects from notes, practiceTests, and practicals if subjects array is empty
+if (fullBackupData.assignments) {
+  fullBackupData.assignments.forEach(assignment => {
+    const metadataKey = `${assignment.subject}-assignments--${assignment.storedFileName}`;
+    if (!fileMetadata.has(metadataKey)) {
+      fileMetadata.set(metadataKey, {
+        title: assignment.title,
+        description: assignment.description,
+        originalFileName: assignment.fileName
+      });
+    }
+  });
+}
+
+// Reconstruct subjects from notes, practiceTests, practicals, and assignments if subjects array is empty
 if (fullBackupData.subjects.length === 0) {
   const allSubjects = new Set();
   
@@ -149,6 +170,10 @@ if (fullBackupData.subjects.length === 0) {
   
   fullBackupData.practicals.forEach(practical => {
     if (practical.subject) allSubjects.add(practical.subject);
+  });
+  
+  fullBackupData.assignments.forEach(assignment => {
+    if (assignment.subject) allSubjects.add(assignment.subject);
   });
   
   allSubjects.forEach(subject => {
@@ -205,6 +230,8 @@ const storage = multer.diskStorage({
         uploadPath = path.join(STORAGE_DIR, subject, 'practice-tests');
       } else if (type === 'practicals') {
         uploadPath = path.join(STORAGE_DIR, subject, 'practicals');
+      } else if (type === 'assignments') {
+        uploadPath = path.join(STORAGE_DIR, subject, 'assignments');
       } else {
         return cb(new Error(`Invalid type: ${type}${type === 'notes' && !unit ? ' (unit required for notes)' : ''}`));
       }
@@ -280,7 +307,8 @@ const createSubjectStructure = (subjectName, units = []) => {
   
   fs.ensureDirSync(path.join(subjectPath, 'practice-tests'));
   fs.ensureDirSync(path.join(subjectPath, 'practicals'));
-  
+  fs.ensureDirSync(path.join(subjectPath, 'assignments'));
+
   return subjectPath;
 };
 
@@ -415,6 +443,8 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
         correctPath = path.join(STORAGE_DIR, subject.trim(), 'practice-tests');
       } else if (type === 'practicals') {
         correctPath = path.join(STORAGE_DIR, subject.trim(), 'practicals');
+      } else if (type === 'assignments') {
+        correctPath = path.join(STORAGE_DIR, subject.trim(), 'assignments');
       }
       
       if (correctPath) {
@@ -477,6 +507,12 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
         !(practical.storedFileName === req.file.filename && practical.subject === subject.trim())
       );
       fullBackupData.practicals.push(backupFileData);
+    } else if (type.trim() === 'assignments') {
+      fullBackupData.assignments = fullBackupData.assignments || [];
+      fullBackupData.assignments = fullBackupData.assignments.filter(assignment =>
+        !(assignment.storedFileName === req.file.filename && assignment.subject === subject.trim())
+      );
+      fullBackupData.assignments.push(backupFileData);
     }
     
     const subjectExists = fullBackupData.subjects.some(s => s.name === subject.trim());
@@ -526,6 +562,8 @@ app.get('/api/files/:subject/:type/:unit?/:filename', (req, res) => {
       filePath = path.join(STORAGE_DIR, subject, 'practice-tests', filename);
     } else if (type === 'practicals') {
       filePath = path.join(STORAGE_DIR, subject, 'practicals', filename);
+    } else if (type === 'assignments') {
+      filePath = path.join(STORAGE_DIR, subject, 'assignments', filename);
     } else {
       filePath = path.join(STORAGE_DIR, subject, type, filename);
     }
@@ -560,9 +598,15 @@ app.get('/api/files/:subject/:type/:unit?/:filename', (req, res) => {
           path.join(STORAGE_DIR, subject.replace(/\s+/g, '-'), 'practicals', filename),
           path.join(STORAGE_DIR, subject.toLowerCase(), 'practicals', filename)
         );
+      } else if (type === 'assignments') {
+        alternativePaths.push(
+          path.join(STORAGE_DIR, subject.replace(/\s+/g, '_'), 'assignments', filename),
+          path.join(STORAGE_DIR, subject.replace(/\s+/g, '-'), 'assignments', filename),
+          path.join(STORAGE_DIR, subject.toLowerCase(), 'assignments', filename)
+        );
       }
       
-      if (type !== 'practice-tests' && type !== 'practicals') {
+      if (type !== 'practice-tests' && type !== 'practicals' && type !== 'assignments') {
         alternativePaths.push(
           path.join(STORAGE_DIR, subject.replace(/\s+/g, '_'), type, filename),
           path.join(STORAGE_DIR, subject.replace(/\s+/g, '-'), type, filename)
@@ -628,6 +672,8 @@ app.delete('/api/files/:subject/:type/:unit?/:filename', (req, res) => {
       filePath = path.join(STORAGE_DIR, subject, 'practice-tests', filename);
     } else if (type === 'practicals') {
       filePath = path.join(STORAGE_DIR, subject, 'practicals', filename);
+    } else if (type === 'assignments') {
+      filePath = path.join(STORAGE_DIR, subject, 'assignments', filename);
     } else {
       filePath = path.join(STORAGE_DIR, subject, type, filename);
     }
@@ -650,6 +696,10 @@ app.delete('/api/files/:subject/:type/:unit?/:filename', (req, res) => {
         } else if (type === 'practicals') {
           fullBackupData.practicals = fullBackupData.practicals.filter(practical => 
             !(practical.storedFileName === filename && practical.subject === subject)
+          );
+        } else if (type === 'assignments') {
+          fullBackupData.assignments = fullBackupData.assignments.filter(assignment => 
+            !(assignment.storedFileName === filename && assignment.subject === subject)
           );
         }
         
@@ -704,6 +754,10 @@ app.delete('/api/files/:subject/:type/:unit?/:filename', (req, res) => {
             } else if (type === 'practicals') {
               fullBackupData.practicals = fullBackupData.practicals.filter(practical => 
                 !(practical.storedFileName === filename && practical.subject === subject)
+              );
+            } else if (type === 'assignments') {
+              fullBackupData.assignments = fullBackupData.assignments.filter(assignment => 
+                !(assignment.storedFileName === filename && assignment.subject === subject)
               );
             }
             
@@ -808,6 +862,8 @@ app.post('/api/verify-files', (req, res) => {
           filePath = path.join(STORAGE_DIR, file.subject, 'practice-tests', file.storedFileName);
         } else if (file.type === 'practicals') {
           filePath = path.join(STORAGE_DIR, file.subject, 'practicals', file.storedFileName);
+        } else if (file.type === 'assignments') {
+          filePath = path.join(STORAGE_DIR, file.subject, 'assignments', file.storedFileName);
         }
         
         if (filePath && fs.existsSync(filePath)) {
@@ -882,7 +938,8 @@ app.get('/api/storage-sync/:subject?', (req, res) => {
         storageStructure[subjectData.name] = {
           notes: {},
           'practice-tests': [],
-          practicals: []
+          practicals: [],
+          assignments: []
         };
         
         const subjectNotes = fullBackupData.notes.filter(note => note.subject === subjectData.name);
@@ -923,6 +980,17 @@ app.get('/api/storage-sync/:subject?', (req, res) => {
           type: practical.type,
           subject: practical.subject
         }));
+        
+        const subjectAssignments = fullBackupData.assignments.filter(assignment => assignment.subject === subjectData.name);
+        storageStructure[subjectData.name].assignments = subjectAssignments.map(assignment => ({
+          filename: assignment.storedFileName,
+          title: assignment.title,
+          description: assignment.description,
+          size: assignment.fileSize,
+          modified: assignment.uploadDate,
+          type: assignment.type,
+          subject: assignment.subject
+        }));
       });
     }
     
@@ -945,7 +1013,8 @@ function getSubjectFiles(subjectPath, subjectName) {
   const subjectData = {
     notes: {},
     'practice-tests': [],
-    practicals: []
+    practicals: [],
+    assignments: []
   };
   
   try {
@@ -989,6 +1058,35 @@ function getSubjectFiles(subjectPath, subjectName) {
             unit: unit
           };
         });
+      });
+    }
+    
+    const assignmentsPath = path.join(subjectPath, 'assignments');
+    if (fs.existsSync(assignmentsPath)) {
+      const files = fs.readdirSync(assignmentsPath)
+        .filter(file => fs.statSync(path.join(assignmentsPath, file)).isFile());
+
+      subjectData.assignments = files.map(filename => {
+        const filePath = path.join(assignmentsPath, filename);
+        const stats = fs.statSync(filePath);
+
+        const metadataKey = `${subjectName}-assignments--${filename}`;
+        const metadata = fileMetadata.get(metadataKey);
+
+        let baseTitle = filename.replace(/\.[^/.]+$/, "");
+        baseTitle = baseTitle.replace(/_\d{13}$/, "");
+        baseTitle = baseTitle.replace(/_/g, " ");
+        baseTitle = baseTitle.replace(/\b\w/g, l => l.toUpperCase());
+
+        return {
+          filename,
+          title: metadata?.title || baseTitle,
+          description: metadata?.description || '',
+          size: formatFileSize(stats.size),
+          modified: stats.mtime.toLocaleDateString(),
+          type: path.extname(filename).toLowerCase().includes('pdf') ? 'pdf' : 'image',
+          subject: subjectName
+        };
       });
     }
     
@@ -1080,7 +1178,20 @@ app.use((error, req, res, next) => {
   console.error('Global error handler:', error);
 });
 
-// ✅ ADD DELETE SUBJECT ROUTE HERE
+app.get('/api/assignments', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: fullBackupData.assignments
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch assignments'
+    });
+  }
+});
+
 app.delete('/api/subjects/:subjectName', (req, res) => {
   try {
     const { subjectName } = req.params;
@@ -1102,6 +1213,7 @@ app.delete('/api/subjects/:subjectName', (req, res) => {
     fullBackupData.notes = fullBackupData.notes.filter(n => n.subject !== subjectName);
     fullBackupData.practiceTests = fullBackupData.practiceTests.filter(t => t.subject !== subjectName);
     fullBackupData.practicals = fullBackupData.practicals.filter(p => p.subject !== subjectName);
+    fullBackupData.assignments = fullBackupData.assignments.filter(a => a.subject !== subjectName);
 
     saveMetadata();
 
@@ -1126,7 +1238,6 @@ app.use('*', (req, res) => {
     path: req.originalUrl
   });
 });
-
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 File storage server running on port ${PORT}`);
@@ -1165,4 +1276,3 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
-
