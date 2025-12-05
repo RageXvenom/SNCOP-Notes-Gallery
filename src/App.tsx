@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Home from './pages/Home';
 import NotesGallery from './pages/NotesGallery';
 import PracticeTests from './pages/PracticeTests';
+import Assignments from './pages/Assignments'; // NEW
 import About from './pages/About';
 import Developer from './pages/Developer';
 import AdminPanel from './pages/AdminPanel';
@@ -46,6 +47,7 @@ function AppRoutes() {
             <Route path="/notes" element={<NotesGallery />} />
             <Route path="/notes/:subject" element={<SubjectNotes />} />
             <Route path="/practice-tests" element={<PracticeTests />} />
+            <Route path="/assignments" element={<Assignments />} /> {/* new */}
             <Route path="/about" element={<About />} />
             <Route path="/developer" element={<Developer />} />
             <Route path="/admin" element={<AdminPanel />} />
