@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, FolderPlus, Server, HardDrive, FileText, Trash2, Plus, CreditCard as Edit, Save, X, LogOut, BookOpen, Users, TestTube } from 'lucide-react';
-import { useData, Note, PracticeTest, Practical, Subject } from '../context/DataContext';
+import { useData, Note, PracticeTest, Practical, Subject, Assignment } from '../context/DataContext';
 import { fileStorageService, FileUploadData } from '../services/fileStorage';
 
 const AdminPanel: React.FC = () => {
@@ -12,6 +12,7 @@ const AdminPanel: React.FC = () => {
     notes = [],
     practiceTests = [],
     practicals = [],
+    assignments = [], // new
     addSubject,
     updateSubject,
     deleteSubject,
@@ -21,14 +22,17 @@ const AdminPanel: React.FC = () => {
     deletePracticeTest,
     addPractical,
     deletePractical,
+    addAssignment, // new
+    deleteAssignment, // new
     updateNotes,
     updatePracticeTests,
     updatePracticals,
+    updateAssignments, // new
     syncWithServer
   } = useData();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'subjects' | 'notes' | 'practice-tests' | 'practicals'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'notes' | 'practice-tests' | 'practicals' | 'assignments'>('subjects'); // added assignments
   const [isAddingSubject, setIsAddingSubject] = useState(false);
   const [editingSubject, setEditingSubject] = useState<string | null>(null);
   const [newSubject, setNewSubject] = useState<{ name: string; units: string[] }>({
@@ -36,7 +40,7 @@ const AdminPanel: React.FC = () => {
     units: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5']
   });
   const [uploadForm, setUploadForm] = useState<{
-    type: 'notes' | 'practice-tests' | 'practicals';
+    type: 'notes' | 'practice-tests' | 'practicals' | 'assignments';
     title: string;
     description: string;
     subject: string;
@@ -136,7 +140,7 @@ const AdminPanel: React.FC = () => {
     setIsUploading(true);
     setUploadProgress(0);
 
-    const currentType = (activeTab === 'notes' || activeTab === 'practice-tests' || activeTab === 'practicals')
+    const currentType = (activeTab === 'notes' || activeTab === 'practice-tests' || activeTab === 'practicals' || activeTab === 'assignments')
       ? activeTab
       : uploadForm.type;
 
@@ -157,7 +161,7 @@ const AdminPanel: React.FC = () => {
         description: uploadForm.description.trim(),
         subject: uploadForm.subject.trim(),
         unit: uploadForm.unit?.trim() || '',
-        type: currentType as 'notes' | 'practice-tests' | 'practicals',
+        type: currentType as 'notes' | 'practice-tests' | 'practicals' | 'assignments',
         file: uploadForm.file
       };
 
@@ -181,7 +185,9 @@ const AdminPanel: React.FC = () => {
           ? `note-${storedFile.subject}-${storedFile.unit || ''}-${storedFile.storedFileName}-${timestamp}`
           : currentType === 'practice-tests'
           ? `test-${storedFile.subject}-${storedFile.storedFileName}-${timestamp}`
-          : `practical-${storedFile.subject}-${storedFile.storedFileName}-${timestamp}`;
+          : currentType === 'practicals'
+          ? `practical-${storedFile.subject}-${storedFile.storedFileName}-${timestamp}`
+          : `assignment-${storedFile.subject}-${storedFile.storedFileName}-${timestamp}`; // assignments id
         
         const baseItem = {
           id: uniqueId,
@@ -214,6 +220,12 @@ const AdminPanel: React.FC = () => {
             subject: storedFile.subject
           } as Practical;
           addPractical(practical);
+        } else if (currentType === 'assignments') {
+          const assignment: Assignment = {
+            ...baseItem,
+            subject: storedFile.subject
+          } as Assignment;
+          addAssignment(assignment);
         }
 
         // Show success message
@@ -226,7 +238,7 @@ const AdminPanel: React.FC = () => {
           
           // Reset form
           setUploadForm({
-            type: currentType as 'notes' | 'practice-tests' | 'practicals',
+            type: currentType as 'notes' | 'practice-tests' | 'practicals' | 'assignments',
             title: '',
             description: '',
             subject: '',
@@ -316,6 +328,11 @@ const AdminPanel: React.FC = () => {
           practical.subject === oldSubject.name ? { ...practical, subject: newSubjectName } : practical
         );
         updatePracticals(updatedPracticals);
+
+        const updatedAssignments = assignments.map(assign =>
+          assign.subject === oldSubject.name ? { ...assign, subject: newSubjectName } : assign
+        );
+        updateAssignments(updatedAssignments);
       }
 
       setEditingSubject(null);
@@ -351,7 +368,7 @@ const AdminPanel: React.FC = () => {
         <div className="flex items-center justify-between mb-8 slide-up enhanced-shadow glass-effect p-6 rounded-2xl">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-gradient neon-glow enhanced-text">Admin Panel</h1>
-            <p className="enhanced-text opacity-80">Manage subjects, notes, and practice tests with dedicated file storage</p>
+            <p className="enhanced-text opacity-80">Manage subjects, notes, practice tests, practicals and assignments</p>
             
             {/* Server Status */}
             <div className="flex items-center space-x-2 mt-2">
@@ -438,6 +455,22 @@ const AdminPanel: React.FC = () => {
           >
             <TestTube className="h-4 w-4" />
             <span>Practicals</span>
+          </button>
+
+          {/* <- NEW: Assignments Tab */}
+          <button
+            onClick={() => {
+              console.log('Switching to assignments tab');
+              setActiveTab('assignments');
+            }}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 ${
+              activeTab === 'assignments'
+                ? 'bg-gradient-to-r from-teal-500 to-green-600 text-white neon-glow enhanced-shadow'
+                : 'bg-high-contrast enhanced-text hover-scale'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Assignments</span>
           </button>
         </div>
 
@@ -546,7 +579,7 @@ const AdminPanel: React.FC = () => {
                         <button
   onClick={async () => {
     console.log(`Delete button clicked for subject: ${getSubjectName(subject)} (ID: ${subject.id})`);
-    if (window.confirm(`Are you sure you want to delete ${getSubjectName(subject)}? This will delete all associated notes, practice tests, and practicals.`)) {
+    if (window.confirm(`Are you sure you want to delete ${getSubjectName(subject)}? This will delete all associated notes, practice tests, practicals, and assignments.`)) {
       try {
         await deleteSubject(subject.id);   // 👈 THIS LINE CALLS deleteSubject
         console.log(`Successfully deleted subject: ${getSubjectName(subject)}`);
@@ -579,13 +612,13 @@ const AdminPanel: React.FC = () => {
           </div>
         )}
 
-        {/* File Upload Tabs */}
-        {(activeTab === 'notes' || activeTab === 'practice-tests' || activeTab === 'practicals') && (
+        {/* File Upload Tabs (notes / practice-tests / practicals / assignments) */}
+        {(activeTab === 'notes' || activeTab === 'practice-tests' || activeTab === 'practicals' || activeTab === 'assignments') && (
           <div className="space-y-6">
             {/* Upload Form */}
             <div className="glass-effect p-6 rounded-2xl fade-in-up enhanced-shadow">
               <h3 className="text-xl font-semibold mb-4 enhanced-text neon-glow">
-                Upload {activeTab === 'notes' ? 'Notes' : activeTab === 'practice-tests' ? 'Practice Test' : 'Practical'}
+                Upload {activeTab === 'notes' ? 'Notes' : activeTab === 'practice-tests' ? 'Practice Test' : activeTab === 'practicals' ? 'Practical' : 'Assignment'}
               </h3>
 
               {/* Upload Progress */}
@@ -670,7 +703,7 @@ const AdminPanel: React.FC = () => {
                   </label>
                   <input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.gif"
+                    accept=".pdf,jpg,jpeg,png,gif"
                     onChange={handleFileChange}
                     className="w-full px-4 py-3 bg-high-contrast rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none enhanced-text file-icon"
                     required
@@ -697,11 +730,11 @@ const AdminPanel: React.FC = () => {
             {/* Files List */}
             <div className="glass-effect p-6 rounded-2xl enhanced-shadow">
               <h3 className="text-xl font-semibold mb-4 enhanced-text neon-glow">
-                Uploaded {activeTab === 'notes' ? 'Notes' : activeTab === 'practice-tests' ? 'Practice Tests' : 'Practicals'}
+                Uploaded {activeTab === 'notes' ? 'Notes' : activeTab === 'practice-tests' ? 'Practice Tests' : activeTab === 'practicals' ? 'Practicals' : 'Assignments'}
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(activeTab === 'notes' ? notes : activeTab === 'practice-tests' ? practiceTests : practicals).map((item, index) => (
+                {(activeTab === 'notes' ? notes : activeTab === 'practice-tests' ? practiceTests : activeTab === 'practicals' ? practicals : assignments).map((item, index) => (
                   <div
                     key={item.id}
                     className="glass-effect p-4 rounded-lg hover-scale slide-up enhanced-shadow"
@@ -748,7 +781,7 @@ const AdminPanel: React.FC = () => {
                               if (success || !test.storedFileName) {
                                 deletePracticeTest(item.id);
                               }
-                            } else {
+                            } else if (activeTab === 'practicals') {
                               const practical = item as any;
                               if (practical.storedFileName && practical.subject) {
                                 success = await fileStorageService.deleteFile(
@@ -759,6 +792,19 @@ const AdminPanel: React.FC = () => {
                               }
                               if (success || !practical.storedFileName) {
                                 deletePractical(item.id);
+                              }
+                            } else {
+                              // assignments
+                              const assignment = item as any;
+                              if (assignment.storedFileName && assignment.subject) {
+                                success = await fileStorageService.deleteFile(
+                                  assignment.subject,
+                                  'assignments',
+                                  assignment.storedFileName
+                                );
+                              }
+                              if (success || !assignment.storedFileName) {
+                                deleteAssignment(item.id);
                               }
                             }
                             
