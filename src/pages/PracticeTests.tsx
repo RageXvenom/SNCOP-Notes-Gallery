@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
-import { Download, FileText, Clock, Eye, Search } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Download, FileText, Clock, Eye } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import FileViewer from '../components/FileViewer';
+import SortFilter from '../components/SortFilter';
 
 const PracticeTests: React.FC = () => {
   const { practiceTests = [], subjects = [] } = useData();
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState<'newest' | 'oldest'>('newest');
+  const [dateFilter, setDateFilter] = useState<string | null>(null);
   const [viewerState, setViewerState] = useState({
     isOpen: false,
     fileData: '',
@@ -18,12 +21,32 @@ const PracticeTests: React.FC = () => {
     storedFileName: ''
   });
 
-  const filteredTests = practiceTests.filter(test => {
-    const matchesSubject = selectedSubject === 'all' || test.subject === selectedSubject;
-    const matchesSearch = (test.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (test.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSubject && matchesSearch;
-  });
+  const filteredTests = useMemo(() => {
+    let filtered = practiceTests.filter(test => {
+      const matchesSubject = selectedSubject === 'all' || test.subject === selectedSubject;
+      const matchesSearch = (test.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (test.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Date filter - exact match
+      let matchesDate = true;
+      if (dateFilter && test.uploadDate) {
+        const testDate = new Date(test.uploadDate);
+        const filterDate = new Date(dateFilter);
+        matchesDate = testDate.toDateString() === filterDate.toDateString();
+      }
+      
+      return matchesSubject && matchesSearch && matchesDate;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.uploadDate || '').getTime();
+      const dateB = new Date(b.uploadDate || '').getTime();
+      return sortOption === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  }, [practiceTests, selectedSubject, searchTerm, dateFilter, sortOption]);
 
   const handleViewFile = (fileData: string, fileName: string, type: 'pdf' | 'image', subject?: string, fileType?: string, unit?: string, storedFileName?: string) => {
     setViewerState({
@@ -66,17 +89,16 @@ const PracticeTests: React.FC = () => {
 
         {/* Filters */}
         <div className="mb-8 space-y-4 fade-in-up">
-          {/* Search */}
-          <div className="relative max-w-md mx-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search practice tests..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 glass-effect rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-800 dark:text-gray-200 placeholder-gray-500"
-            />
-          </div>
+          {/* Sort Filter Component */}
+          <SortFilter
+            initialSort={sortOption}
+            initialSearch={searchTerm}
+            initialDate={dateFilter}
+            onSortChange={setSortOption}
+            onSearchChange={setSearchTerm}
+            onDateFilterChange={setDateFilter}
+            className="mb-6"
+          />
 
           {/* Subject Filter */}
           <div className="flex flex-wrap gap-3 justify-center p-4 bg-high-contrast rounded-xl enhanced-shadow">
@@ -178,7 +200,7 @@ const PracticeTests: React.FC = () => {
               No practice tests found
             </h3>
             <p className="text-high-contrast opacity-70">
-              {searchTerm || selectedSubject !== 'all'
+              {searchTerm || selectedSubject !== 'all' || dateFilter
                 ? 'Try adjusting your search criteria or filters.'
                 : 'Practice tests will appear here once they are uploaded by the admin.'}
             </p>
@@ -218,4 +240,3 @@ const PracticeTests: React.FC = () => {
 };
 
 export default PracticeTests;
-
