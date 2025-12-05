@@ -14,6 +14,7 @@ interface ServerSubjectData {
   notes?: Record<string, ServerFile[]>;
   'practice-tests'?: ServerFile[];
   practicals?: ServerFile[];
+  assignments?: ServerFile[]; // <- added assignments
 }
 
 interface ServerStorage {
@@ -63,6 +64,21 @@ export interface Practical {
   storedFileName?: string;
 }
 
+// <== NEW: Assignment interface (mirrors Practical) ==>
+export interface Assignment {
+  id: string;
+  title: string;
+  description: string;
+  fileName: string;
+  fileSize: string;
+  uploadDate: string;
+  subject: string;
+  type: 'pdf' | 'image';
+  fileData?: string;
+  filePath?: string;
+  storedFileName?: string;
+}
+
 export interface Subject {
   id: string;
   name: string;
@@ -74,6 +90,7 @@ interface DataContextType {
   notes: Note[];
   practiceTests: PracticeTest[];
   practicals: Practical[];
+  assignments: Assignment[]; // <- added to context type
   isLoggedIn: boolean;
   addSubject: (subject: Subject) => void;
   updateSubject: (id: string, updatedSubject: Subject) => void;
@@ -84,9 +101,12 @@ interface DataContextType {
   deletePracticeTest: (id: string) => void;
   addPractical: (practical: Practical) => void;
   deletePractical: (id: string) => void;
+  addAssignment: (assignment: Assignment) => void; // new
+  deleteAssignment: (id: string) => void; // new
   updateNotes: (notes: Note[]) => void;
   updatePracticeTests: (tests: PracticeTest[]) => void;
   updatePracticals: (practicals: Practical[]) => void;
+  updateAssignments: (assignments: Assignment[]) => void; // new
   login: (email: string, password: string) => boolean;
   logout: () => void;
   syncWithServer: () => Promise<void>;
@@ -102,6 +122,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [notes, setNotes] = useState<Note[]>(() => JSON.parse(localStorage.getItem('sncop_notes') || '[]'));
   const [practiceTests, setPracticeTests] = useState<PracticeTest[]>(() => JSON.parse(localStorage.getItem('sncop_practice_tests') || '[]'));
   const [practicals, setPracticals] = useState<Practical[]>(() => JSON.parse(localStorage.getItem('sncop_practicals') || '[]'));
+  const [assignments, setAssignments] = useState<Assignment[]>(() => JSON.parse(localStorage.getItem('sncop_assignments') || '[]')); // new
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('sncop_admin_logged_in') === 'true');
 
   const saveToLocalStorage = useCallback((key: string, data: any) => {
@@ -112,6 +133,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => { saveToLocalStorage('sncop_notes', notes); }, [notes, saveToLocalStorage]);
   useEffect(() => { saveToLocalStorage('sncop_practice_tests', practiceTests); }, [practiceTests, saveToLocalStorage]);
   useEffect(() => { saveToLocalStorage('sncop_practicals', practicals); }, [practicals, saveToLocalStorage]);
+  useEffect(() => { saveToLocalStorage('sncop_assignments', assignments); }, [assignments, saveToLocalStorage]); // new
 
   const login = (email: string, password: string) => {
     const success = email === ADMIN_EMAIL && password === ADMIN_PASSWORD;
@@ -146,6 +168,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const serverNotes: Note[] = [];
       const serverPracticeTests: PracticeTest[] = [];
       const serverPracticals: Practical[] = [];
+      const serverAssignments: Assignment[] = []; // new
 
       Object.entries(serverStorage.storageStructure)
         .filter(([subjectName]) => subjectName.toLowerCase() !== 'temp')
@@ -208,17 +231,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               });
             });
           }
+
+          // <- NEW: assignments sync
+          if (subjectData.assignments) {
+            subjectData.assignments.forEach((file: ServerFile) => {
+              serverAssignments.push({
+                id: `assignment-${subjectName}-${file.filename}-${Date.now()}`,
+                title: file.title || file.filename.replace(/\.[^/.]+$/, '').replace(/_/g, ' '),
+                description: file.description || '',
+                fileName: file.filename,
+                fileSize: file.size || '0 KB',
+                uploadDate: file.modified || new Date().toLocaleDateString(),
+                subject: subjectName,
+                type: file.type || 'pdf',
+                storedFileName: file.filename
+              });
+            });
+          }
         });
 
       setSubjects(serverSubjects);
       setNotes(serverNotes);
       setPracticeTests(serverPracticeTests);
       setPracticals(serverPracticals);
+      setAssignments(serverAssignments); // new
       console.log("✅ Synced with server at", new Date().toLocaleTimeString(), {
         subjects: serverSubjects.length,
         notes: serverNotes.length,
         practiceTests: serverPracticeTests.length,
-        practicals: serverPracticals.length
+        practicals: serverPracticals.length,
+        assignments: serverAssignments.length
       });
     } catch (error) {
       console.error('Error syncing with server:', error);
@@ -259,6 +301,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setNotes(prev => prev.filter(n => n.subject !== subjectToDelete.name));
       setPracticeTests(prev => prev.filter(t => t.subject !== subjectToDelete.name));
       setPracticals(prev => prev.filter(p => p.subject !== subjectToDelete.name));
+      setAssignments(prev => prev.filter(a => a.subject !== subjectToDelete.name)); // new
 
       await syncWithServer();
       console.log(`Subject deleted: ${subjectToDelete.name}`);
@@ -268,6 +311,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // CRUD helpers
+  const addNote = (note: Note) => setNotes(prev => [...prev, note]);
+  const deleteNote = (id: string) => setNotes(prev => prev.filter(n => n.id !== id));
+  const addPracticeTest = (test: PracticeTest) => setPracticeTests(prev => [...prev, test]);
+  const deletePracticeTest = (id: string) => setPracticeTests(prev => prev.filter(t => t.id !== id));
+  const addPractical = (practical: Practical) => setPracticals(prev => [...prev, practical]);
+  const deletePractical = (id: string) => setPracticals(prev => prev.filter(p => p.id !== id));
+
+  // <- NEW: assignments helpers
+  const addAssignment = (assignment: Assignment) => setAssignments(prev => [...prev, assignment]);
+  const deleteAssignment = (id: string) => setAssignments(prev => prev.filter(a => a.id !== id));
+  const updateNotes = (newNotes: Note[]) => setNotes(newNotes);
+  const updatePracticeTests = (tests: PracticeTest[]) => setPracticeTests(tests);
+  const updatePracticals = (practicalsArg: Practical[]) => setPracticals(practicalsArg);
+  const updateAssignments = (assignmentsArg: Assignment[]) => setAssignments(assignmentsArg); // new
+
   return (
     <DataContext.Provider
       value={{
@@ -275,19 +334,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         notes,
         practiceTests,
         practicals,
+        assignments, // new
         isLoggedIn,
         addSubject,
         updateSubject,
         deleteSubject,
-        addNote: note => setNotes(prev => [...prev, note]),
-        deleteNote: id => setNotes(prev => prev.filter(n => n.id !== id)),
-        addPracticeTest: test => setPracticeTests(prev => [...prev, test]),
-        deletePracticeTest: id => setPracticeTests(prev => prev.filter(t => t.id !== id)),
-        addPractical: practical => setPracticals(prev => [...prev, practical]),
-        deletePractical: id => setPracticals(prev => prev.filter(p => p.id !== id)),
-        updateNotes: setNotes,
-        updatePracticeTests: setPracticeTests,
-        updatePracticals: setPracticals,
+        addNote,
+        deleteNote,
+        addPracticeTest,
+        deletePracticeTest,
+        addPractical,
+        deletePractical,
+        addAssignment, // new
+        deleteAssignment, // new
+        updateNotes,
+        updatePracticeTests,
+        updatePracticals,
+        updateAssignments, // new
         login,
         logout,
         syncWithServer
@@ -303,5 +366,3 @@ export const useData = () => {
   if (!context) throw new Error('useData must be used within DataProvider');
   return context;
 };
-
-
