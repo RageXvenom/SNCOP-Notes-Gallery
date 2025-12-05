@@ -36,6 +36,7 @@ const Header: React.FC = () => {
     { name: 'Home', href: '/' },
     { name: 'Notes Gallery', href: '/notes' },
     { name: 'Practice Tests', href: '/practice-tests' },
+    { name: 'Assignments', href: '/assignments' }, // <-- new
     { name: 'SNCOP-AI', href: '/ai-chat' },
     { name: 'About', href: '/about' },
     { name: 'Developer', href: '/developer' },
@@ -162,16 +163,13 @@ const Header: React.FC = () => {
                   className="flex items-center space-x-2 px-4 py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium shadow-lg"
                 >
                   <Settings className="h-4 w-4" />
-                  <span>Admin Panel</span>
+                  <span>Admin</span>
                 </Link>
               </nav>
             </div>
           </div>
         )}
       </header>
-
-      {/* Spacer to prevent content from being hidden under fixed header */}
-      <div className="h-16" />
     </>
   );
 };
