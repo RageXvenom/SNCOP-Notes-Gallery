@@ -54,7 +54,7 @@ const Home: React.FC = () => {
                 <span className="text-gradient">SNCOP</span>
                 <br />
                 <span className="text-4xl md:text-6xl text-gray-800 dark:text-gray-200">
-                  B.Pharm Notes
+                  Companion
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed">
